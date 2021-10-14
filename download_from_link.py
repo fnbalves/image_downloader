@@ -1,4 +1,4 @@
-import argparse
+import argparse, sys
 import urllib.request
 import ssl
 import re
@@ -50,6 +50,10 @@ def download_images_from_page(args):
     folder = args.dest_folder
     url = args.url
     headers = None
+    
+    src_tag = 'src'
+    if args.src_tag is not None:
+        src_tag = args.src_tag
 
     if args.referer is not None:
         headers = {}
@@ -62,16 +66,18 @@ def download_images_from_page(args):
     target_imgs = [i for i in imgs if i.has_attr(args.required_attr)]
 
     if args.attr_regex is not None:
-        target_imgs[:] = [t for t in target_imgs if re.match(args.attr_regex, t[t.required_attr])]
+        target_imgs[:] = [t for t in target_imgs if re.match(args.attr_regex, t[args.required_attr])]
     
     num_images = len(target_imgs)
     print('Found %d images' % num_images)
-    for index, i in enumerate(target_imgs):
+    for index, i in enumerate(target_imgs[3:]):
         try:
-            image_raw_name = i['data-src'].split('?')[0]
+            image_raw_name = i[src_tag].split('?')[0]
+            if '://' not in image_raw_name:
+                url_base = args.url.split('://')[0] + '://' + args.url.replace('http://', '').replace('https://', '').split('/')[0]
+                image_raw_name = url_base + image_raw_name
             image_name = image_raw_name.split('/')[-1].split('.')[0]
             path = os.path.join(folder, image_name)
-            
             save_image(image_raw_name, path, headers)
             print('Saved %d of %d' % (index + 1, num_images))
         except:
@@ -99,6 +105,7 @@ parser=argparse.ArgumentParser()
 
 parser.add_argument('--url', help='Source url')
 parser.add_argument('--image_tag', help='Image tag to search')
+parser.add_argument('--src_tag', help='The tag that contains the image address. Defaults to src')
 parser.add_argument('--required_attr', help='Required attribute for the image tags')
 parser.add_argument('--attr_regex', help='Optional regex to max for the attribute defined in --required-attr')
 parser.add_argument('--referer', help='Referer for the request')
