@@ -5,6 +5,19 @@ import re
 import os
 from requests import Request, Session
 from bs4 import BeautifulSoup as Soup
+from os.path import exists
+
+def get_next_possible_path(initial_path):
+    if not exists(initial_path):
+        return initial_path
+    index = 1
+    base_name = '.'.join(initial_path.split('.')[:-1])
+    extension = initial_path.split('.')[-1]
+    next_name = base_name + '(%d)' % index + '.' + extension
+    while exists(next_name):
+        index += 1
+        next_name = base_name + '(%d)' % index + '.' + extension
+    return next_name
 
 def get_ssl_context():
     ctx = ssl.create_default_context()
@@ -38,7 +51,9 @@ def save_image(url, dest_filename, extra_headers = None):
 
     file_extension = url.split('.')[-1]
     req = urllib.request.Request(url, headers=headers)
-    with open(dest_filename + '.' + file_extension, "wb") as f:
+    raw_path_to_save = dest_filename + '.' + file_extension
+    path_to_save = get_next_possible_path(raw_path_to_save)
+    with open(path_to_save, "wb") as f:
         with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
             f.write(r.read())
 
